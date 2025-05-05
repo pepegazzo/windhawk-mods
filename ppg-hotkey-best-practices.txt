@@ -1,4 +1,4 @@
-Hotkey-Enabled Mod Best Practices
+Hotkey-Enabled Mod Best Practices for Windhawk
 
 Whenever you need a mod that listens for hotkeys and still unloads cleanly, follow these steps:
 
