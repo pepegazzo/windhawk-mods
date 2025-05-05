@@ -1,0 +1,20 @@
+Hotkey-Enabled Mod Best Practices
+
+Whenever you need a mod that listens for hotkeys and still unloads cleanly, follow these steps:
+
+Spawn a Dedicated Thread
+Run all your hotkey registration and message pumping in a separate std::thread so you don’t block or interfere with Windhawk’s main thread.
+
+Create a Message-Only Window
+Inside that thread, register a hidden window (HWND_MESSAGE) and call RegisterHotKey on it. This gives you a clean target for GetMessage.
+
+Use an Atomic “Running” Flag
+Maintain a std::atomic<bool> that your thread checks each iteration of the GetMessage loop. This lets you signal “stop” from the main unload path.
+
+Signal Shutdown with WM_QUIT
+In Wh_ModUninit(), set your atomic flag to false and post a WM_QUIT message to the stored window handle. That immediately breaks your blocking GetMessage call.
+
+Join Before Unload
+After signaling shutdown, call thread.join() so the hotkey thread has fully unregistered its hotkey, destroyed its window, and exited before your DLL is torn out of memory.
+
+Keep that recipe handy, and any future mod using global hotkeys will register reliably—and always shut down without crashes or runaway loops.
