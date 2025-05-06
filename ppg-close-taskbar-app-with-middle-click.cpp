@@ -1,24 +1,13 @@
 // ==WindhawkMod==
-// @id              taskbar-button-click-fork
-// @name            Middle click to close on the taskbar - Fork
+// @id              ppg-close-taskbar-app-with-middle-click
+// @name            PPG - Close Taskbar App with Middle Click
 // @description     Close programs with a middle click on the taskbar instead of creating a new instance
-// @version         1.0.7
-// @author          m417z
-// @github          https://github.com/m417z
-// @twitter         https://twitter.com/m417z
-// @homepage        https://m417z.com/
+// @version         2
+// @author          Pepe Gazzo & m417z
 // @include         explorer.exe
 // @architecture    x86-64
 // @compilerOptions -lversion -lwininet
 // ==/WindhawkMod==
-
-// Source code is published under The GNU General Public License v3.0.
-//
-// For bug reports and feature requests, please open an issue here:
-// https://github.com/ramensoftware/windhawk-mods/issues
-//
-// For pull requests, development takes place here:
-// https://github.com/m417z/my-windhawk-mods
 
 // ==WindhawkModReadme==
 /*
@@ -30,13 +19,8 @@ instance.
 Holding Ctrl while middle clicking will end the running task. The key
 combination can be configured or disabled in the mod settings.
 
-Only Windows 10 64-bit and Windows 11 are supported. For other Windows versions
-check out [7+ Taskbar Tweaker](https://tweaker.ramensoftware.com/).
+Only Windows 10 64-bit and Windows 11 are supported. 
 
-**Note:** To customize the old taskbar on Windows 11 (if using ExplorerPatcher
-or a similar tool), enable the relevant option in the mod's settings.
-
-![Demonstration](https://i.imgur.com/qeO9tLG.gif)
 */
 // ==/WindhawkModReadme==
 
@@ -723,7 +707,7 @@ bool HookSymbolsWithOnlineCacheFallback(HMODULE module,
     cacheStrKey += moduleFileName;
 
     std::wstring onlineCacheUrl =
-        L"https://ramensoftware.github.io/windhawk-mod-symbol-cache/";
+        L"https://pepegazzo.github.io/windhawk-mods/windhawk-mod-symbol-cache/";
     onlineCacheUrl += kModIdForCache;
     onlineCacheUrl += L'/';
     onlineCacheUrl += cacheStrKey;
