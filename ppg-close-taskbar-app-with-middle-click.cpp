@@ -1,5 +1,5 @@
 // ==WindhawkMod==
-// @id              ppg-close-taskbar-app-with-middle-click
+// @id              ppg-close-taskbar-app-with-middle-click-custom
 // @name            PPG - Close Taskbar App with Middle Click
 // @description     Close programs with a middle click on the taskbar instead of creating a new instance
 // @version         3
