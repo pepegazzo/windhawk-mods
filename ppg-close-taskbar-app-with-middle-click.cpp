@@ -2,7 +2,7 @@
 // @id              ppg-close-taskbar-app-with-middle-click
 // @name            PPG - Close Taskbar App with Middle Click
 // @description     Close programs with a middle click on the taskbar instead of creating a new instance
-// @version         2
+// @version         3
 // @author          Pepe Gazzo & m417z
 // @include         explorer.exe
 // @architecture    x86-64
@@ -44,12 +44,6 @@ Only Windows 10 64-bit and Windows 11 are supported.
     forcefully end the running task
 
     Note: This option won't have effect on a group of taskbar items
-- oldTaskbarOnWin11: false
-  $name: Customize the old taskbar on Windows 11
-  $description: >-
-    Enable this option to customize the old taskbar on Windows 11 (if using
-    ExplorerPatcher or a similar tool). Note: For Windhawk versions older than
-    1.3, you have to disable and re-enable the mod to apply this option.
 */
 // ==/WindhawkModSettings==
 
@@ -72,7 +66,6 @@ struct {
     int multipleItemsBehavior;
     bool keysToEndTaskCtrl;
     bool keysToEndTaskAlt;
-    bool oldTaskbarOnWin11;
 } g_settings;
 
 enum class WinVersion {
@@ -729,124 +722,6 @@ bool HookSymbolsWithOnlineCacheFallback(HMODULE module,
     return HookSymbols(module, symbolHooks, symbolHooksCount);
 }
 
-bool HookExplorerPatcherSymbols(HMODULE explorerPatcherModule) {
-    if (g_explorerPatcherInitialized.exchange(true)) {
-        return true;
-    }
-
-    struct EXPLORER_PATCHER_HOOK {
-        PCSTR symbol;
-        void** pOriginalFunction;
-        void* hookFunction = nullptr;
-        bool optional = false;
-    };
-
-    EXPLORER_PATCHER_HOOK hooks[] = {
-        // // Win11 only:
-        // {R"()",
-        //  (void**)&CTaskListWnd_HandleClick_Original,
-        //  (void*)CTaskListWnd_HandleClick_Hook},
-        // Win10 and Win11:
-        {R"(?_HandleClick@CTaskListWnd@@IEAAXPEAUITaskBtnGroup@@HW4eCLICKACTION@1@HH@Z)",
-         (void**)&CTaskListWnd__HandleClick_Original,
-         (void*)CTaskListWnd__HandleClick_Hook},
-        {R"(?Launch@CTaskBand@@UEAAJPEAUITaskGroup@@AEBUtagPOINT@@W4LaunchFromTaskbarOptions@@@Z)",
-         (void**)&CTaskBand_Launch_Original, (void*)CTaskBand_Launch_Hook},
-        {R"(?GetActiveBtn@CTaskListWnd@@UEAAJPEAPEAUITaskGroup@@PEAH@Z)",
-         (void**)&CTaskListWnd_GetActiveBtn_Original},
-        {R"(?ProcessJumpViewCloseWindow@CTaskListWnd@@UEAAXPEAUHWND__@@PEAUITaskGroup@@PEAUHMONITOR__@@@Z)",
-         (void**)&CTaskListWnd_ProcessJumpViewCloseWindow_Original},
-        {R"(?_EndTask@CTaskBand@@IEAAXQEAUHWND__@@H@Z)",
-         (void**)&CTaskBand__EndTask_Original},
-        {R"(?GetGroupType@CTaskBtnGroup@@UEAA?AW4eTBGROUPTYPE@@XZ)",
-         (void**)&CTaskBtnGroup_GetGroupType_Original},
-        {R"(?GetGroup@CTaskBtnGroup@@UEAAPEAUITaskGroup@@XZ)",
-         (void**)&CTaskBtnGroup_GetGroup_Original},
-        {R"(?GetTaskItem@CTaskBtnGroup@@UEAAPEAUITaskItem@@H@Z)",
-         (void**)&CTaskBtnGroup_GetTaskItem_Original},
-        {R"(?GetWindow@CWindowTaskItem@@UEAAPEAUHWND__@@XZ)",
-         (void**)&CWindowTaskItem_GetWindow_Original},
-        {R"(?GetWindow@CImmersiveTaskItem@@UEAAPEAUHWND__@@XZ)",
-         (void**)&CImmersiveTaskItem_GetWindow_Original},
-        // {R"()", (void**)&CImmersiveTaskItem_vftable},
-    };
-
-    bool succeeded = true;
-
-    for (const auto& hook : hooks) {
-        void* ptr = (void*)GetProcAddress(explorerPatcherModule, hook.symbol);
-        if (!ptr) {
-            Wh_Log(L"ExplorerPatcher symbol%s doesn't exist: %S",
-                   hook.optional ? L" (optional)" : L"", hook.symbol);
-            if (!hook.optional) {
-                succeeded = false;
-            }
-            continue;
-        }
-
-        if (hook.hookFunction) {
-            Wh_SetFunctionHook(ptr, hook.hookFunction, hook.pOriginalFunction);
-        } else {
-            *hook.pOriginalFunction = ptr;
-        }
-    }
-
-    if (g_initialized) {
-        Wh_ApplyHookOperations();
-    }
-
-    return succeeded;
-}
-
-bool HandleModuleIfExplorerPatcher(HMODULE module) {
-    WCHAR moduleFilePath[MAX_PATH];
-    switch (
-        GetModuleFileName(module, moduleFilePath, ARRAYSIZE(moduleFilePath))) {
-        case 0:
-        case ARRAYSIZE(moduleFilePath):
-            return false;
-    }
-
-    PCWSTR moduleFileName = wcsrchr(moduleFilePath, L'\\');
-    if (!moduleFileName) {
-        return false;
-    }
-
-    moduleFileName++;
-
-    if (_wcsnicmp(L"ep_taskbar.", moduleFileName, sizeof("ep_taskbar.") - 1) !=
-        0) {
-        return true;
-    }
-
-    Wh_Log(L"ExplorerPatcher taskbar loaded: %s", moduleFileName);
-    return HookExplorerPatcherSymbols(module);
-}
-
-void HandleLoadedExplorerPatcher() {
-    HMODULE hMods[1024];
-    DWORD cbNeeded;
-    if (EnumProcessModules(GetCurrentProcess(), hMods, sizeof(hMods),
-                           &cbNeeded)) {
-        for (size_t i = 0; i < cbNeeded / sizeof(HMODULE); i++) {
-            HandleModuleIfExplorerPatcher(hMods[i]);
-        }
-    }
-}
-
-using LoadLibraryExW_t = decltype(&LoadLibraryExW);
-LoadLibraryExW_t LoadLibraryExW_Original;
-HMODULE WINAPI LoadLibraryExW_Hook(LPCWSTR lpLibFileName,
-                                   HANDLE hFile,
-                                   DWORD dwFlags) {
-    HMODULE module = LoadLibraryExW_Original(lpLibFileName, hFile, dwFlags);
-    if (module && !((ULONG_PTR)module & 3) && !g_explorerPatcherInitialized) {
-        HandleModuleIfExplorerPatcher(module);
-    }
-
-    return module;
-}
-
 bool HookTaskbarSymbols() {
     // Taskbar.dll, explorer.exe
     SYMBOL_HOOK symbolHooks[] = {
@@ -952,8 +827,6 @@ void LoadSettings() {
 
     g_settings.keysToEndTaskCtrl = Wh_GetIntSetting(L"keysToEndTask.Ctrl");
     g_settings.keysToEndTaskAlt = Wh_GetIntSetting(L"keysToEndTask.Alt");
-
-    g_settings.oldTaskbarOnWin11 = Wh_GetIntSetting(L"oldTaskbarOnWin11");
 }
 
 BOOL Wh_ModInit() {
@@ -967,29 +840,8 @@ BOOL Wh_ModInit() {
         return FALSE;
     }
 
-    if (g_settings.oldTaskbarOnWin11) {
-        bool hasWin10Taskbar = g_winVersion < WinVersion::Win11_24H2;
-
-        if (g_winVersion >= WinVersion::Win11) {
-            g_winVersion = WinVersion::Win10;
-        }
-
-        if (hasWin10Taskbar && !HookTaskbarSymbols()) {
-            return FALSE;
-        }
-
-        HandleLoadedExplorerPatcher();
-
-        HMODULE kernelBaseModule = GetModuleHandle(L"kernelbase.dll");
-        FARPROC pKernelBaseLoadLibraryExW =
-            GetProcAddress(kernelBaseModule, "LoadLibraryExW");
-        Wh_SetFunctionHook((void*)pKernelBaseLoadLibraryExW,
-                           (void*)LoadLibraryExW_Hook,
-                           (void**)&LoadLibraryExW_Original);
-    } else {
-        if (!HookTaskbarSymbols()) {
-            return FALSE;
-        }
+    if (!HookTaskbarSymbols()) {
+        return FALSE;
     }
 
     g_initialized = true;
@@ -997,22 +849,12 @@ BOOL Wh_ModInit() {
     return TRUE;
 }
 
-void Wh_ModAfterInit() {
-    // Try again in case there's a race between the previous attempt and the
-    // LoadLibraryExW hook.
-    if (g_settings.oldTaskbarOnWin11 && !g_explorerPatcherInitialized) {
-        HandleLoadedExplorerPatcher();
-    }
-}
-
 BOOL Wh_ModSettingsChanged(BOOL* bReload) {
     Wh_Log(L">");
 
-    bool prevOldTaskbarOnWin11 = g_settings.oldTaskbarOnWin11;
-
     LoadSettings();
 
-    *bReload = g_settings.oldTaskbarOnWin11 != prevOldTaskbarOnWin11;
+    *bReload = FALSE;
 
     return TRUE;
 }
