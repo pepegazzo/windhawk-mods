@@ -187,7 +187,8 @@ void MoveWindowToMonitor(HWND hwnd, HMONITOR mon) {
                     _wcsicmp(exe, L"StartMenuExperienceHost.exe") == 0 ||
                     _wcsicmp(exe, L"SearchApp.exe") == 0 ||
                     _wcsicmp(exe, L"SearchUI.exe") == 0 ||
-                    _wcsicmp(exe, L"SearchHost.exe") == 0) {
+                    _wcsicmp(exe, L"SearchHost.exe") == 0 ||
+                    _wcsicmp(exe, L"Rainlendar2.exe") == 0) {
                     CloseHandle(hProc);
                     return;
                 }
