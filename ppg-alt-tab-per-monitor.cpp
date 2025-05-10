@@ -1,6 +1,6 @@
 // ==WindhawkMod==
 // @id              ppe-alt-tab-per-monitor
-// @name            PPH - Alt+Tab Per Monitor
+// @name            PPG - Alt+Tab Per Monitor
 // @description     Pressing Alt+Tab shows only the windows on the monitor where the cursor is.
 // @version         1.1.0
 // @author          Pepe Gazzo & L3r0y
