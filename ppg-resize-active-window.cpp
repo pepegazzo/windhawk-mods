@@ -216,6 +216,14 @@ void ResizeActiveWindow() {
     // Restore the window from maximized state
     ShowWindow(hwnd, SW_RESTORE);
 
+    // Get the DPI of the monitor where the window is located
+    UINT dpi = GetDpiForWindow(hwnd);
+    float scalingFactor = static_cast<float>(dpi) / 96.0f; // 96 is the default DPI
+
+    // Scale the desired window size based on the DPI
+    int scaledWidth = static_cast<int>(1440 * scalingFactor);
+    int scaledHeight = static_cast<int>(900 * scalingFactor);
+
     // Resize the window
-    SetWindowPos(hwnd, nullptr, 0, 0, 2880, 1800, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    SetWindowPos(hwnd, nullptr, 0, 0, scaledWidth, scaledHeight, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
 }
